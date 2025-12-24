@@ -1,0 +1,54 @@
+import os
+from flask import Flask
+from threading import Thread
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+
+# --- সার্ভার সচল রাখার কোড ---
+app = Flask('')
+@app.route('/')
+def home(): return "Bot is Online!"
+def run(): app.run(host='0.0.0.0', port=8080)
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# --- বোটের ফিচার কাস্টমাইজ করা ---
+
+# /start দিলে যা দেখাবে
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_name = update.effective_user.first_name
+    
+    # বাটন তৈরি
+    keyboard = [
+        [InlineKeyboardButton("আমার প্রোফাইল", callback_data='profile')],
+        [InlineKeyboardButton("সহায়তা নিন", callback_data='help')],
+        [InlineKeyboardButton("চ্যানেল জয়েন করুন", url="https://t.me/your_channel")] # এখানে আপনার লিংক দিন
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    welcome_text = f"স্বাগতম {user_name}!\nআমি আপনার কাস্টম বোট। আপনি নিচের বাটনগুলো ব্যবহার করতে পারেন।"
+    await update.message.reply_text(text=welcome_text, reply_markup=reply_markup)
+
+# বাটন ক্লিক করলে যা হবে
+async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'profile':
+        await query.message.edit_text(f"আপনার নাম: {update.effective_user.first_name}\nআইডি: {update.effective_user.id}")
+    elif query.data == 'help':
+        await query.message.edit_text("আপনার যদি কোনো সাহায্যের প্রয়োজন হয়, তবে অ্যাডমিনকে মেসেজ দিন।")
+
+if __name__ == '__main__':
+    # 8309172328:AAEUhXGeR2XtPWz5zA3zTZjj0nzVm2NYlhw
+    TOKEN = "8309172328:AAEUhXGeR2XtPWz5zA3zTZjj0nzVm2NYlhw"
+    
+    keep_alive()
+    application = Application.builder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_click))
+    
+    print("বোটটি আপডেট হয়েছে...")
+    application.run_polling()
